@@ -1,1 +1,162 @@
-T1MA
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wolf and Sheep Game</title>
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    body { 
+        margin: 0; 
+        overflow: hidden; 
+        background: url('https://i.postimg.cc/VNPRt7dC/vecteezy-grass-or-greenish-vector-background-design-template-16188341.jpg') repeat;
+    }
+    #gameArea {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+    }
+    .svgElement {
+        position: absolute;
+        transition: all 0.3s;
+    }
+    #scoreboard {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+    }
+    .bush { fill: darkgreen; }
+</style>
+</head>
+<body>
+<div id="gameArea">
+    <div id="scoreboard" class="bg-light p-2 rounded">Score: <span id="score">0</span></div>
+    <!-- SVGs will be inserted here dynamically -->
+</div>
+
+<script>
+    const gameArea = document.getElementById('gameArea');
+    const scoreDisplay = document.getElementById('score');
+    let score = 0;
+
+    // SVG Definitions
+    const wolfSVG = `<svg class="svgElement" id="wolf" width="40" height="40" viewBox="0 0 40 40"><path d="M..."/></svg>`; // Path for wolf SVG
+    const sheepSVG = `<svg class="svgElement" id="sheep" width="30" height="30" viewBox="0 0 30 30"><path d="M..."/></svg>`; // Path for sheep SVG
+    const bushSVG = `<svg class="svgElement" width="50" height="50" viewBox="0 0 50 50"><path class="bush" d="M..."/></svg>`; // Path for bush SVG
+
+    // Game Objects
+    let wolf = {x: 100, y: 100, element: null};
+    let sheeps = [{x: 200, y: 200, element: null, direction: Math.random() * 360, fleeing: false}];
+    let bushes = [{x: 300, y: 300}, {x: 400, y: 100}];
+
+    // Setup Game
+    function setupGame() {
+        wolf.element = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+        wolf.element.innerHTML = wolfSVG.replace('id="wolf"', '');
+        gameArea.appendChild(wolf.element);
+        updateWolfPosition();
+
+        sheeps.forEach(sheep => {
+            sheep.element = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+            sheep.element.innerHTML = sheepSVG.replace('id="sheep"', '');
+            gameArea.appendChild(sheep.element);
+            updateSheepPosition(sheep);
+        });
+
+        bushes.forEach(bush => {
+            let bushElement = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+            bushElement.innerHTML = bushSVG;
+            bushElement.style.left = bush.x + 'px';
+            bushElement.style.top = bush.y + 'px';
+            gameArea.appendChild(bushElement);
+        });
+
+        document.addEventListener('keydown', moveWolf);
+    }
+
+    // Wolf movement
+    function moveWolf(e) {
+        const step = 10;
+        switch(e.key) {
+            case 'ArrowUp': wolf.y -= step; break;
+            case 'ArrowDown': wolf.y += step; break;
+            case 'ArrowLeft': wolf.x -= step; break;
+            case 'ArrowRight': wolf.x += step; break;
+        }
+        updateWolfPosition();
+        checkSheepCollision();
+    }
+
+    function updateWolfPosition() {
+        wolf.element.style.left = wolf.x + 'px';
+        wolf.element.style.top = wolf.y + 'px';
+    }
+
+    function updateSheepPosition(sheep) {
+        if(sheep.fleeing) {
+            // Flee logic
+            sheep.x += Math.cos(sheep.direction) * 15; // Faster than wolf
+            sheep.y += Math.sin(sheep.direction) * 15;
+            if(Math.random() < 0.01) { // Chance to stop fleeing
+                sheep.fleeing = false;
+            }
+        } else {
+            // Roam logic
+            sheep.x += Math.cos(sheep.direction) * 5;
+            sheep.y += Math.sin(sheep.direction) * 5;
+            if(Math.random() < 0.005) sheep.direction += (Math.random() - 0.5) * 0.2; // Slight change in direction
+        }
+        sheep.element.style.left = sheep.x + 'px';
+        sheep.element.style.top = sheep.y + 'px';
+        checkDetection(sheep);
+    }
+
+    function checkDetection(sheep) {
+        if (!sheep.fleeing && !isWolfHidden()) {
+            // Simple line of sight detection
+            let dx = wolf.x - sheep.x;
+            let dy = wolf.y - sheep.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 200) { // Detection range
+                sheep.fleeing = true;
+                sheep.direction = Math.atan2(dy, dx) + Math.PI; // Flee in opposite direction
+                setTimeout(() => sheep.fleeing = false, 6000);
+            }
+        }
+    }
+
+    function isWolfHidden() {
+        // Check if wolf is behind any bush
+        return bushes.some(bush => {
+            return wolf.x < bush.x + 50 && wolf.x + 40 > bush.x && 
+                   wolf.y < bush.y + 50 && wolf.y + 40 > bush.y;
+        });
+    }
+
+    function checkSheepCollision() {
+        sheeps.forEach(sheep => {
+            if (Math.abs(wolf.x - sheep.x) < 30 && Math.abs(wolf.y - sheep.y) < 30) {
+                // Wolf catches sheep
+                score++;
+                scoreDisplay.textContent = score;
+                // Reset sheep or remove it
+                sheep.x = Math.random() * gameArea.offsetWidth;
+                sheep.y = Math.random() * gameArea.offsetHeight;
+            }
+        });
+    }
+
+    // Game Loop
+    function gameLoop() {
+        sheeps.forEach(updateSheepPosition);
+        requestAnimationFrame(gameLoop);
+    }
+
+    setupGame();
+    gameLoop();
+</script>
+</body>
+</html>

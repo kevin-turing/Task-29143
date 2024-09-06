@@ -1,1 +1,289 @@
-T1IR
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wolf and Sheep Game</title>
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    body { 
+        margin: 0; 
+        overflow: hidden; 
+        background: url('https://i.postimg.cc/VNPRt7dC/vecteezy-grass-or-greenish-vector-background-design-template-16188341.jpg') repeat;
+    }
+    #gameArea {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+    }
+    .entity {
+        position: absolute;
+        transition: all 0.1s; /* Reduced transition time for smoother movement */
+    }
+    #scoreboard {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+    }
+</style>
+</head>
+<body>
+<div id="gameArea">
+    <div id="scoreboard" class="bg-light p-2 rounded">Score: <span id="score">0</span></div>
+</div>
+
+<script>
+const gameArea = document.getElementById('gameArea');
+const scoreDisplay = document.getElementById('score');
+let score = 0;
+
+const wolfSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40">
+  <defs>
+    <radialGradient id="furGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#8B7355;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5D4037;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <g transform="translate(50 50)">
+    <path d="M-5,-20 Q-30,-15 -40,0 Q-30,15 -5,20 Q20,25 30,15 Q40,0 30,-15 Q20,-25 -5,-20 Z" fill="url(#furGradient)"/>
+    <path d="M30,-15 Q40,-10 45,0 Q40,10 30,15 Q35,5 35,0 Q35,-5 30,-15 Z" fill="#6D4C41"/>
+    <path d="M45,0 Q50,-5 55,0 Q50,5 45,0 Z" fill="#5D4037"/>
+    <ellipse cx="38" cy="-7" rx="2" ry="1.5" fill="#000000"/>
+    <ellipse cx="38" cy="7" rx="2" ry="1.5" fill="#000000"/>
+    <path d="M25,-18 Q30,-25 35,-18 Q30,-20 25,-18 Z" fill="#5D4037"/>
+    <path d="M25,18 Q30,25 35,18 Q30,20 25,18 Z" fill="#5D4037"/>
+    <path d="M-20,-18 Q-25,-20 -27,-15 Q-22,-17 -20,-18 Z" fill="#4E342E"/>
+    <path d="M-20,18 Q-25,20 -27,15 Q-22,17 -20,18 Z" fill="#4E342E"/>
+    <path d="M15,-22 Q10,-25 8,-20 Q12,-23 15,-22 Z" fill="#4E342E"/>
+    <path d="M15,22 Q10,25 8,20 Q12,23 15,22 Z" fill="#4E342E"/>
+    <path d="M-40,0 Q-50,10 -55,0 Q-50,-10 -40,0 Z" fill="#6D4C41"/>
+    <path d="M-5,-20 Q0,-18 5,-20 M5,-20 Q10,-18 15,-20 M15,-20 Q20,-18 25,-20" fill="none" stroke="#7D6354" stroke-width="0.5"/>
+    <path d="M-5,20 Q0,18 5,20 M5,20 Q10,18 15,20 M15,20 Q20,18 25,20" fill="none" stroke="#7D6354" stroke-width="0.5"/>
+    <path d="M-30,-10 Q-25,-12 -20,-10 M-10,-10 Q-5,-12 0,-10 M10,-10 Q15,-12 20,-10" fill="none" stroke="#7D6354" stroke-width="0.5"/>
+    <path d="M-30,10 Q-25,12 -20,10 M-10,10 Q-5,12 0,10 M10,10 Q15,12 20,10" fill="none" stroke="#7D6354" stroke-width="0.5"/>
+  </g>
+</svg>`;
+
+const sheepSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="30" height="30">
+  <defs>
+    <radialGradient id="woolGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F5F5F5;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <g transform="translate(50 50)">
+    <path d="M-5,-18 Q-25,-15 -35,0 Q-25,15 -5,18 Q15,20 25,10 Q35,0 25,-10 Q15,-20 -5,-18 Z" fill="url(#woolGradient)"/>
+    <path d="M25,-10 Q35,-5 38,0 Q35,5 25,10 Q30,0 25,-10 Z" fill="#E0E0E0"/>
+    <ellipse cx="35" cy="0" rx="3" ry="2" fill="#D7CCC8"/>
+    <ellipse cx="34" cy="-4" rx="1.5" ry="1" fill="#000000"/>
+    <ellipse cx="34" cy="4" rx="1.5" ry="1" fill="#000000"/>
+    <path d="M22,-12 Q25,-15 28,-12 Q25,-13 22,-12 Z" fill="#D7CCC8"/>
+    <path d="M22,12 Q25,15 28,12 Q25,13 22,12 Z" fill="#D7CCC8"/>
+    <path d="M-15,-15 Q-18,-18 -20,-14 Q-17,-16 -15,-15 Z" fill="#E0E0E0"/>
+    <path d="M-15,15 Q-18,18 -20,14 Q-17,16 -15,15 Z" fill="#E0E0E0"/>
+    <path d="M10,-17 Q7,-20 5,-16 Q8,-18 10,-17 Z" fill="#E0E0E0"/>
+    <path d="M10,17 Q7,20 5,16 Q8,18 10,17 Z" fill="#E0E0E0"/>
+    <path d="M-5,-18 Q-2,-20 1,-18 M1,-18 Q4,-20 7,-18 M7,-18 Q10,-20 13,-18" fill="none" stroke="#F0F0F0" stroke-width="1"/>
+    <path d="M-5,18 Q-2,20 1,18 M1,18 Q4,20 7,18 M7,18 Q10,20 13,18" fill="none" stroke="#F0F0F0" stroke-width="1"/>
+    <path d="M-25,-10 Q-22,-12 -19,-10 M-12,-10 Q-9,-12 -6,-10 M1,-10 Q4,-12 7,-10" fill="none" stroke="#F0F0F0" stroke-width="1"/>
+    <path d="M-25,10 Q-22,12 -19,10 M-12,10 Q-9,12 -6,10 M1,10 Q4,12 7,10" fill="none" stroke="#F0F0F0" stroke-width="1"/>
+  </g>
+</svg>`;
+
+const bushSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="50" height="50">
+  <defs>
+    <radialGradient id="leafGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <g transform="translate(50 50)">
+    <path d="M-40,0 Q-30,-30 0,-40 Q30,-30 40,0 Q30,30 0,40 Q-30,30 -40,0 Z" fill="url(#leafGradient)"/>
+    <path d="M-20,-20 Q-15,-25 -10,-20 Q-15,-15 -20,-20 Z" fill="#81C784"/>
+    <path d="M20,-20 Q25,-25 30,-20 Q25,-15 20,-20 Z" fill="#81C784"/>
+    <path d="M-20,20 Q-15,25 -10,20 Q-15,15 -20,20 Z" fill="#81C784"/>
+    <path d="M20,20 Q25,25 30,20 Q25,15 20,20 Z" fill="#81C784"/>
+    <path d="M-30,-10 Q-20,-20 -10,-10 Q-20,0 -30,-10 Z" fill="#388E3C" opacity="0.3"/>
+    <path d="M10,-30 Q20,-20 30,-10 Q20,-20 10,-30 Z" fill="#81C784" opacity="0.3"/>
+    <path d="M-10,30 Q0,20 10,30 Q0,40 -10,30 Z" fill="#388E3C" opacity="0.3"/>
+    <path d="M-35,0 Q-25,-10 -15,0 M-15,0 Q-5,-10 5,0 M5,0 Q15,-10 25,0" fill="none" stroke="#4CAF50" stroke-width="1"/>
+    <path d="M0,-35 Q10,-25 0,-15 M0,-15 Q10,-5 0,5 M0,5 Q10,15 0,25" fill="none" stroke="#4CAF50" stroke-width="1"/>
+  </g>
+</svg>`;
+
+let wolf = {x: 100, y: 100, element: null, vx: 0, vy: 0};
+let sheeps = [];
+let bushes = [];
+
+const keys = {};
+
+function createEntity(type, x, y) {
+    const entity = document.createElement('div');
+    entity.className = `entity ${type}`;
+    entity.style.left = `${x}px`;
+    entity.style.top = `${y}px`;
+    entity.innerHTML = type === 'wolf' ? wolfSVG : type === 'sheep' ? sheepSVG : bushSVG;
+    gameArea.appendChild(entity);
+    return entity;
+}
+
+function setupGame() {
+    wolf.element = createEntity('wolf', wolf.x, wolf.y);
+
+    for (let i = 0; i < 5; i++) {
+        sheeps.push({
+            x: Math.random() * (gameArea.offsetWidth - 30),
+            y: Math.random() * (gameArea.offsetHeight - 30),
+            element: null,
+            direction: Math.random() * 360,
+            fleeing: false,
+            vx: 0,
+            vy: 0
+        });
+        sheeps[i].element = createEntity('sheep', sheeps[i].x, sheeps[i].y);
+    }
+
+    for (let i = 0; i < 10; i++) {
+        let x = Math.random() * (gameArea.offsetWidth - 50);
+        let y = Math.random() * (gameArea.offsetHeight - 50);
+        bushes.push({x, y, element: createEntity('bush', x, y)});
+    }
+
+    document.addEventListener('keydown', (e) => keys[e.key] = true);
+    document.addEventListener('keyup', (e) => keys[e.key] = false);
+}
+
+function moveWolf() {
+    const acceleration = 0.5;
+    const maxSpeed = 5;
+    const friction = 0.9;
+    const rotationSpeed = 5; // Degrees per frame
+
+    let targetRotation = wolf.rotation;
+
+    if (keys['ArrowUp']) wolf.vy -= acceleration;
+    if (keys['ArrowDown']) wolf.vy += acceleration;
+    if (keys['ArrowLeft']) {
+        wolf.vx -= acceleration;
+        targetRotation = -90;
+    }
+    if (keys['ArrowRight']) {
+        wolf.vx += acceleration;
+        targetRotation = 90;
+    }
+
+    // Calculate the movement direction
+    if (wolf.vx !== 0 || wolf.vy !== 0) {
+        targetRotation = Math.atan2(wolf.vy, wolf.vx) * 180 / Math.PI;
+    }
+
+    // Smoothly rotate the wolf towards the target rotation
+    const rotationDiff = targetRotation - wolf.rotation;
+    if (Math.abs(rotationDiff) > rotationSpeed) {
+        wolf.rotation += rotationDiff > 0 ? rotationSpeed : -rotationSpeed;
+    } else {
+        wolf.rotation = targetRotation;
+    }
+
+    wolf.vx *= friction;
+    wolf.vy *= friction;
+
+    wolf.vx = Math.max(-maxSpeed, Math.min(maxSpeed, wolf.vx));
+    wolf.vy = Math.max(-maxSpeed, Math.min(maxSpeed, wolf.vy));
+
+    wolf.x += wolf.vx;
+    wolf.y += wolf.vy;
+
+    wolf.x = Math.max(0, Math.min(gameArea.offsetWidth - 40, wolf.x));
+    wolf.y = Math.max(0, Math.min(gameArea.offsetHeight - 40, wolf.y));
+
+    wolf.element.style.left = `${wolf.x}px`;
+    wolf.element.style.top = `${wolf.y}px`;
+    wolf.element.style.transform = `rotate(${wolf.rotation}deg)`;
+
+    checkSheepCollision();
+}
+
+function updateSheepPosition(sheep) {
+    const maxSpeed = sheep.fleeing ? 3 : 1;
+    const acceleration = sheep.fleeing ? 0.2 : 0.05;
+
+    if (sheep.fleeing) {
+        let dx = wolf.x - sheep.x;
+        let dy = wolf.y - sheep.y;
+        let angle = Math.atan2(dy, dx);
+        sheep.vx -= Math.cos(angle) * acceleration;
+        sheep.vy -= Math.sin(angle) * acceleration;
+    } else {
+        if (Math.random() < 0.02) {
+            sheep.direction = Math.random() * 360;
+        }
+        sheep.vx += Math.cos(sheep.direction * Math.PI / 180) * acceleration;
+        sheep.vy += Math.sin(sheep.direction * Math.PI / 180) * acceleration;
+    }
+
+    sheep.vx = Math.max(-maxSpeed, Math.min(maxSpeed, sheep.vx));
+    sheep.vy = Math.max(-maxSpeed, Math.min(maxSpeed, sheep.vy));
+
+    sheep.x += sheep.vx;
+    sheep.y += sheep.vy;
+    
+    sheep.x = Math.max(0, Math.min(gameArea.offsetWidth - 30, sheep.x));
+    sheep.y = Math.max(0, Math.min(gameArea.offsetHeight - 30, sheep.y));
+    
+    sheep.element.style.left = `${sheep.x}px`;
+    sheep.element.style.top = `${sheep.y}px`;
+    sheep.element.style.transform = `rotate(${Math.atan2(sheep.vy, sheep.vx) * 180 / Math.PI}deg)`;
+    
+    checkWolfDetection(sheep);
+}
+
+function checkWolfDetection(sheep) {
+    if (!sheep.fleeing && !isWolfHidden()) {
+        let dx = wolf.x - sheep.x;
+        let dy = wolf.y - sheep.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 150) {
+            sheep.fleeing = true;
+            setTimeout(() => {
+                sheep.fleeing = false;
+            }, 6000);
+        }
+    }
+}
+
+function isWolfHidden() {
+    return bushes.some(bush => 
+        Math.abs(wolf.x - bush.x) < 40 && Math.abs(wolf.y - bush.y) < 40
+    );
+}
+
+function checkSheepCollision() {
+    sheeps.forEach((sheep, index) => {
+        if (Math.abs(wolf.x - sheep.x) < 30 && Math.abs(wolf.y - sheep.y) < 30) {
+            score++;
+            scoreDisplay.textContent = score;
+            gameArea.removeChild(sheep.element);
+            sheeps.splice(index, 1);
+            if (sheeps.length === 0) {
+                alert('You won! All sheep caught.');
+                location.reload();
+            }
+        }
+    });
+}
+
+function gameLoop() {
+    moveWolf();
+    sheeps.forEach(updateSheepPosition);
+    requestAnimationFrame(gameLoop);
+}
+
+setupGame();
+gameLoop();
+</script>
+</body>
+</html>

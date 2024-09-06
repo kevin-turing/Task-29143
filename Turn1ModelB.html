@@ -1,1 +1,170 @@
-T1MB
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wolf and Sheep Game</title>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {
+    background-image: url('https://i.postimg.cc/VNPRt7dC/vecteezy-grass-or-greenish-vector-background-design-template-16188341.jpg');
+    background-size: cover;
+    overflow: hidden;
+}
+
+#gameArea {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#scoreboard {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.entity {
+    position: absolute;
+    transition: all 0.1s;
+}
+
+.bush {
+    width: 50px;
+    height: 50px;
+    background: darkgreen;
+    border-radius: 50%;
+}
+
+.wolf, .sheep, .fox {
+    width: 40px;
+    height: 40px;
+}
+
+.sheep, .fox {
+    transform: rotate(0deg);
+}
+</style>
+</head>
+<body>
+<div id="gameArea">
+    <div id="scoreboard" class="bg-light">
+        Score: <span id="score">0</span>
+    </div>
+    <div id="wolf" class="entity wolf">
+        <!-- SVG for wolf -->
+        <svg viewBox="0 0 100 100" width="40" height="40">
+            <polygon points="50,10 70,90 30,90" style="fill:brown;stroke:black;stroke-width:2" />
+        </svg>
+    </div>
+    <!-- Add sheep, fox, and bushes dynamically -->
+</div>
+
+<script>
+document.addEventListener('keydown', (e) => {
+    const wolf = document.getElementById('wolf');
+    const step = 10;
+    switch(e.key) {
+        case 'ArrowUp': wolf.style.top = (parseInt(wolf.style.top || 0) - step) + 'px'; break;
+        case 'ArrowDown': wolf.style.top = (parseInt(wolf.style.top || 0) + step) + 'px'; break;
+        case 'ArrowLeft': wolf.style.left = (parseInt(wolf.style.left || 0) - step) + 'px'; break;
+        case 'ArrowRight': wolf.style.left = (parseInt(wolf.style.left || 0) + step) + 'px'; break;
+    }
+    checkCollision();
+});
+
+function createEntity(type, count) {
+    for(let i = 0; i < count; i++) {
+        const entity = document.createElement('div');
+        entity.className = `entity ${type}`;
+        entity.style.top = `${Math.random() * (window.innerHeight - 50)}px`;
+        entity.style.left = `${Math.random() * (window.innerWidth - 50)}px`;
+        if(type !== 'bush') {
+            entity.innerHTML = `<svg viewBox="0 0 100 100" width="40" height="40">
+                <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="${type === 'sheep' ? 'white' : 'orange'}" />
+                <line x1="50" y1="50" x2="${type === 'sheep' ? '70' : '30'}" y2="50" style="stroke:black;stroke-width:5" />
+            </svg>`;
+        }
+        document.getElementById('gameArea').appendChild(entity);
+        if(type !== 'bush') setupMovement(entity, type);
+    }
+}
+
+function setupMovement(entity, type) {
+    let direction = Math.random() * 360;
+    let speed = type === 'sheep' ? 3 : 2; // Fox is slower for simplicity
+    let interval;
+    
+    function move() {
+        const angleInRadians = direction * Math.PI / 180;
+        const dx = Math.cos(angleInRadians) * speed;
+        const dy = Math.sin(angleInRadians) * speed;
+        entity.style.left = (parseFloat(entity.style.left || 0) + dx) + 'px';
+        entity.style.top = (parseFloat(entity.style.top || 0) + dy) + 'px';
+        entity.style.transform = `rotate(${direction}deg)`;
+        
+        if(Math.random() < 0.005) direction += (Math.random() - 0.5) * 60; // Random change in direction
+        
+        // Boundary check
+        if(entity.offsetLeft < 0 || entity.offsetLeft > window.innerWidth - 40 || 
+           entity.offsetTop < 0 || entity.offsetTop > window.innerHeight - 40) {
+            direction += 180; // Turn around
+        }
+        
+        checkWolfProximity(entity, type);
+    }
+
+    interval = setInterval(move, 50);
+}
+
+function checkWolfProximity(entity, type) {
+    const wolf = document.getElementById('wolf');
+    const distance = Math.hypot(
+        entity.offsetLeft - wolf.offsetLeft,
+        entity.offsetTop - wolf.offsetTop
+    );
+    
+    if(distance < 150 && !isHidden(wolf)) {
+        clearInterval(entity.interval);
+        const escapeDirection = Math.atan2(wolf.offsetTop - entity.offsetTop, wolf.offsetLeft - entity.offsetLeft) * 180 / Math.PI + 180;
+        entity.style.transform = `rotate(${escapeDirection}deg)`;
+        entity.interval = setInterval(() => {
+            const speed = 6; // Escape speed
+            const dx = Math.cos(escapeDirection * Math.PI / 180) * speed;
+            const dy = Math.sin(escapeDirection * Math.PI / 180) * speed;
+            entity.style.left = (parseFloat(entity.style.left || 0) + dx) + 'px';
+            entity.style.top = (parseFloat(entity.style.top || 0) + dy) + 'px';
+        }, 50);
+        setTimeout(() => {
+            setupMovement(entity, type);
+        }, 6000);
+    }
+}
+
+function isHidden(wolf) {
+    const bushes = document.querySelectorAll('.bush');
+    return Array.from(bushes).some(bush => 
+        Math.hypot(bush.offsetLeft - wolf.offsetLeft, bush.offsetTop - wolf.offsetTop) < 25
+    );
+}
+
+function checkCollision() {
+    const wolf = document.getElementById('wolf');
+    const sheeps = document.querySelectorAll('.sheep, .fox');
+    sheeps.forEach(sheep => {
+        if(Math.hypot(wolf.offsetLeft - sheep.offsetLeft, wolf.offsetTop - sheep.offsetTop) < 30) {
+            sheep.remove();
+            document.getElementById('score').textContent = parseInt(document.getElementById('score').textContent) + 1;
+        }
+    });
+}
+
+createEntity('sheep', 5);
+createEntity('fox', 2);
+createEntity('bush', 10);
+</script>
+</body>
+</html>
